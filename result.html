@@ -1,0 +1,30 @@
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<canvas id="radarChart"></canvas>
+
+<script>
+const ctx = document.getElementById('radarChart');
+
+new Chart(ctx, {
+  type: 'radar',
+  data: {
+    labels: ["馬型", "男孩型", "狐狸型", "鼴鼠型"],
+    datasets: [{
+      label: "你的心理傾向分布",
+      data: {{ radar.values()|list }},
+      fill: true,
+      borderWidth: 2
+    }]
+  },
+  options: {
+    scales: {
+      r: {
+        beginAtZero: true,
+        max: 5
+      }
+    }
+  }
+});
+</script>
+
+
