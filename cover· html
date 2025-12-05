@@ -1,0 +1,46 @@
+<div id="cover" style="
+    width: 100%;
+    min-height: 100vh;
+    background: #f2f2f2;
+    font-family: 'DFKai-SB', '標楷體', serif;
+    color: #000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    padding: 40px;
+    text-align: center;
+">
+    <div style="
+        background: white;
+        padding: 40px 50px;
+        border-radius: 20px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        max-width: 600px;
+    ">
+        <h1 style="font-size: 36px; letter-spacing: 2px; margin-bottom: 20px;">
+            四種人格動物測驗
+        </h1>
+
+        <p style="font-size: 20px; line-height: 1.8; margin-bottom: 30px;">
+            用 5 題問題，找出你在面對<br>
+            生活、人際、挫折與情緒時的傾向。<br>
+            測驗會帶你了解你比較接近：<br><br>
+            <b>男孩型｜狐狸型｜馬型｜鼴鼠型</b><br><br>
+            並搭配雷達圖，分析你的多面向人格。
+        </p>
+
+        <button onclick="startQuiz()" style="
+            margin-top: 20px;
+            padding: 12px 35px;
+            font-size: 20px;
+            border-radius: 10px;
+            background: black;
+            color: white;
+            border: none;
+            cursor: pointer;
+            letter-spacing: 2px;
+        ">開始測驗</button>
+    </div>
+</div>
+
