@@ -1,0 +1,365 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>四大人格心理測驗 — 單題逐題</title>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root{--bg:#0f172a;--card:#0b1220;--accent:#06b6d4;--muted:#94a3b8;--glass: rgba(255,255,255,0.03)}
+    html,body{height:100%;margin:0;font-family: -apple-system,BlinkMacSystemFont,'Segoe UI', Roboto, 'Noto Sans CJK TC', 'Microsoft JhengHei', 'PingFang TC', sans-serif;background:linear-gradient(180deg,#071025 0%, #07102f 60%);color:#e6eef6}
+    .app{max-width:920px;margin:32px auto;padding:20px;border-radius:12px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));box-shadow:0 6px 24px rgba(2,6,23,0.6)}
+    header{display:flex;align-items:center;gap:12px}
+    h1{margin:0;font-size:20px}
+    .meta{color:var(--muted);font-size:13px}
+    .card{background:var(--card);padding:18px;border-radius:10px;margin-top:16px}
+    .question-area{min-height:140px;display:flex;flex-direction:column;gap:12px}
+    .qtext{font-size:18px}
+    .choices{display:flex;flex-direction:column;gap:10px}
+    .choice{background:var(--glass);padding:12px;border-radius:8px;border:1px solid rgba(255,255,255,0.03);cursor:pointer}
+    .choice:hover{transform:translateY(-2px)}
+    .choice.selected{outline:3px solid rgba(6,182,212,0.12);background:linear-gradient(90deg, rgba(6,182,212,0.06), rgba(6,182,212,0.02))}
+    .controls{display:flex;align-items:center;justify-content:space-between;margin-top:12px}
+    .btn{background:var(--accent);color:#021025;padding:10px 14px;border-radius:8px;border:none;cursor:pointer;font-weight:600}
+    .btn.ghost{background:transparent;color:var(--muted);border:1px solid rgba(255,255,255,0.04)}
+    .progress{height:8px;background:rgba(255,255,255,0.03);border-radius:8px;overflow:hidden}
+    .progress > i{display:block;height:100%;background:linear-gradient(90deg,var(--accent), #60a5fa);width:0%}
+    .result{display:none;margin-top:16px}
+    .grid{display:grid;grid-template-columns:1fr 360px;gap:16px}
+    @media(max-width:920px){.grid{grid-template-columns:1fr} .card{padding:14px}}
+    .analysis{white-space:pre-wrap;line-height:1.55;color:#dfefff;background:linear-gradient(180deg, rgba(255,255,255,0.01), transparent);padding:12px;border-radius:8px}
+    footer{margin-top:14px;color:var(--muted);font-size:13px}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>四大人格心理測驗 — 單題逐題</h1>
+        <div class="meta">馬 / 男孩 / 狐狸 / 鼴鼠 — 完整解析、雷達圖顯示、並列混合型判讀</div>
+      </div>
+    </header>
+
+    <div class="card">
+      <div class="grid">
+        <div>
+          <div id="questionWrap" class="question-area">
+            <div id="qnum" class="meta"></div>
+            <div id="qtext" class="qtext"></div>
+            <div id="choices" class="choices"></div>
+          </div>
+
+          <div class="controls">
+            <button id="prevBtn" class="btn ghost">上一步</button>
+            <div style="flex:1;margin:0 12px">
+              <div class="progress" aria-hidden="true"><i id="progressBar" style="width:0%"></i></div>
+            </div>
+            <button id="nextBtn" class="btn">下一題</button>
+          </div>
+        </div>
+
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between">
+            <div class="meta">你的向度雷達圖</div>
+            <div id="scoreSummary" class="meta"></div>
+          </div>
+          <canvas id="radar" width="360" height="320" style="background:transparent;margin-top:8px"></canvas>
+
+          <div id="resultPanel" class="result card">
+            <h3 style="margin-top:0">測驗結果</h3>
+            <div id="typeTitle" style="font-weight:700;font-size:18px"></div>
+            <div id="typePerc" class="meta" style="margin-bottom:8px"></div>
+            <div class="analysis" id="fullAnalysis"></div>
+            <div style="margin-top:8px;display:flex;gap:8px;flex-wrap:wrap">
+              <button id="restart" class="btn ghost">重新作答</button>
+              <button id="export" class="btn">匯出結果</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <footer>將此檔案命名為 <code>index.html</code>，推到 GitHub repo 的根目錄並啟用 GitHub Pages（或直接用 gh-pages branch）。即可直接在 Pages 上運行。</footer>
+  </div>
+
+  <script>
+  // --- 可自訂題庫與各選項對應的向度權重 ---
+  const QUESTIONS = [
+    {text: '當你遇到一個新的挑戰/ 任務時，你的第一反應是：', choices: [
+      {t:'馬', txt:'(A) 馬上跳進去、先試看看'},
+      {t:'男孩', txt:'(B) 先觀察環境、研究方式'},
+      {t:'狐狸', txt:'(C) 有點猶豫、怕搞砸、先做部分準備'},
+      {t:'鼴鼠', txt:'(D) 恕幫助他人、在背後支撐或配合'}
+    ]},
+    {text: '在人際互動中，當朋友需要幫忙 /情緒低落時，你通常會：', choices:[
+      {t:'馬', txt:'(A) 鼓勵他們「快起來、一起去做點什麼」'},
+      {t:'男孩', txt:'(B) 安靜陪伴、傾聽他們說出來'},
+      {t:'狐狸', txt:'(C) 有點退縮、不太確定怎麼幫比較好'},
+      {t:'鼴鼠', txt:'(D) 主動提供支持、做好後勤或照顧他們'}
+    ]},
+    {text: '當你在思考人生或尋找方向時，你偏好哪種方式？', choices:[
+      {t:'馬', txt:'(A) 設定目標、立刻動手實踐'},
+      {t:'男孩', txt:'(B) 深入思考、寫筆記、分析可能性'},
+      {t:'狐狸', txt:'(C) 小心翼翼、怕錯、慢慢走'},
+      {t:'鼴鼠', txt:'(D) 和他人分享、互相支持、一步一腳印'}
+    ]},
+    {text: '面對失敗或挫折，你最可能的反應是：', choices:[
+      {t:'馬', txt:'(A) 立刻反彈、再戰一次'},
+      {t:'男孩', txt:'(B) 自我反省、思考教訓'},
+      {t:'狐狸', txt:'(C) 感到沮喪、有點退縮、怕再犯錯'},
+      {t:'鼴鼠', txt:'(D) 尋求或提供人際支持、共同面對'}
+    ]},
+    {text: '如果要選擇你最看重的特質，是哪一項：', choices:[
+      {t:'馬', txt:'(A) 冒險精神/行動力'},
+      {t:'男孩', txt:'(B) 思考深度/內在探索'},
+      {t:'狐狸', txt:'(C) 謹慎/安全感'},
+      {t:'鼴鼠', txt:'(D) 溫暖/支持他人'}
+    ]}
+  ];
+
+  // 深度解析：每種類型的長文描述（可按需擴充）
+  const ANALYSES = {
+    '馬': `你是【馬型】：
+
+你習慣當那個「載大家走過去」的人。
+
+你的樣子：
+你很習慣扛責任、撐住場面。很多時候，你自己其實也會累、也會彷徨，可是你會先問：「大家還好嗎？」你是那種會陪著別人走一段的人，願意當那匹穩穩向前的馬。
+
+你給人的感覺：
+你讓人有安全感。只要你在，事情好像就能慢慢被處理好。很多人會在不知不覺中依賴你、把難題丟給你，因為你看起來總是知道該怎麼做。
+
+給你的提醒：
+你不是永遠都要那麼堅強。當你覺得很重的時候，也可以停下來，把一些重量放回去，或者請別人幫忙扛一點。有時候，真正的力量不是一直往前衝，而是敢在需要的時候說：「我也想被照顧。」`,
+
+    '男孩': `你是【男孩型】：
+
+關於自己，你還在學著怎麼相信。
+
+你的樣子：
+你有很強的感受力，對世界充滿好奇，也對自己充滿問號。你常常會想：「我到底夠不夠好？」「我能不能被喜歡、被理解？」這種敏感，讓你更容易看見別人的情緒，也更容易忽略自己的需要。
+
+你給人的感覺：
+在別人眼中，你像一個正在長大的孩子，真誠、直接、很真實。你會為了關係不斷自我檢討，只想讓自己變得更好。很多人因為你願意說出脆弱，而覺得被陪伴。
+
+給你的提醒：
+你不需要完美才值得被愛。試著多看看自己已經做得不錯的地方，允許「還在路上」的自己存在。當你願意對自己溫柔一點，你就會發現：原來你早就已經是某個人心裡，很重要的那個存在。`,
+
+    '狐狸': `你是【狐狸型】：
+
+你看得很清楚，只是習慣把心收好。
+
+你的樣子：
+你敏銳、細心，對人的真心假意、情況的危險程度，有一種直覺式的判斷。你不會輕易把自己交出去，因為你知道受傷有多痛，所以寧可慢一點、再確定一點。
+
+你給人的感覺：
+一開始，你可能讓人覺得有距離、有點冷，但真正走進你心裡的人都知道：你其實非常忠誠、非常有義氣。你不會亂承諾，一旦說出口，就會盡力做到。
+
+給你的提醒：
+保持界線是好事，但也別把自己關得太緊。不是每個人都會像過去那些人一樣傷你。你可以試著多給世界一點點機會—不是為了別人，而是為了讓自己有機會被好好對待。`,
+
+    '鼴鼠': `你是【鼴鼠型】：
+
+你的溫柔，是世界很需要的安慰。
+
+你的樣子：
+你很重視「舒服感」——食物、氣氛、陪伴、小確幸。你知道人不可能每天都很強，所以你特別會照顧情緒、照顧氣氛。你會為別人準備點心、傳訊息問候、講些好笑的話，讓沉重變得沒那麼可怕。
+
+你給人的感覺：
+你像一個會做甜點的好朋友，可能不會給一大串理性分析，但總會讓人覺得：「跟你在一起就不那麼難過了。」多人其實靠你的存在，才撐過了一些很黑暗的日子。
+
+給你的提醒：
+在照顧別人之前，也別忘了問一句：「那我自己呢？」你值得把同樣的溫柔，留一份給自己。偶爾不用那麼逗趣、那麼體貼，也沒關係—就算今天只想躺著，你一樣是很可愛的你。`
+  };
+
+  // --- 程式狀態 ---
+  let idx = 0;
+  const answers = new Array(QUESTIONS.length).fill(null);
+  const score = { '馬':0,'男孩':0,'狐狸':0,'鼴鼠':0 };
+
+  // DOM
+  const qnum = document.getElementById('qnum');
+  const qtext = document.getElementById('qtext');
+  const choicesWrap = document.getElementById('choices');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+  const progressBar = document.getElementById('progressBar');
+  const radarCtx = document.getElementById('radar').getContext('2d');
+  const resultPanel = document.getElementById('resultPanel');
+  const typeTitle = document.getElementById('typeTitle');
+  const typePerc = document.getElementById('typePerc');
+  const fullAnalysis = document.getElementById('fullAnalysis');
+  const scoreSummary = document.getElementById('scoreSummary');
+  const restart = document.getElementById('restart');
+  const exportBtn = document.getElementById('export');
+
+  // 初始化 Chart
+  let radarChart = new Chart(radarCtx, {
+    type: 'radar',
+    data: {
+      labels: ['馬','男孩','狐狸','鼴鼠'],
+      datasets: [{
+        label: '你的四大向度',
+        data: [0,0,0,0],
+        fill: true,
+        tension: 0.3,
+        pointRadius: 4
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      scales: {
+        r: {min:0,max:100,beginAtZero:true,grid:{circular:true}}
+      },
+      plugins: {legend:{display:false}}
+    }
+  });
+
+  function renderQuestion(i){
+    const q = QUESTIONS[i];
+    qnum.textContent = `題目 ${i+1} / ${QUESTIONS.length}`;
+    qtext.textContent = q.text;
+    choicesWrap.innerHTML = '';
+    q.choices.forEach((c,ci)=>{
+      const el = document.createElement('div');
+      el.className = 'choice';
+      el.tabIndex = 0;
+      el.innerHTML = `<div style="font-weight:600">${c.txt}</div><div class="meta">對應：${c.t}</div>`;
+      if(answers[i]===ci) el.classList.add('selected');
+      el.addEventListener('click', ()=> selectChoice(i,ci));
+      el.addEventListener('keydown', (e)=>{ if(e.key==='Enter') selectChoice(i,ci) });
+      choicesWrap.appendChild(el);
+    });
+    prevBtn.disabled = (i===0);
+    nextBtn.textContent = (i===QUESTIONS.length-1) ? '完成' : '下一題';
+    updateProgress();
+  }
+
+  function selectChoice(qIndex, choiceIndex){
+    answers[qIndex]=choiceIndex;
+    // update visual selection
+    Array.from(choicesWrap.children).forEach((c,idx)=> c.classList.toggle('selected', idx===choiceIndex));
+  }
+
+  function updateProgress(){
+    const done = answers.filter(a=>a!==null).length;
+    const pct = Math.round((done/QUESTIONS.length)*100);
+    progressBar.style.width = pct + '%';
+    // update score preview (temporary counts)
+    const preview = computeScoresFromAnswers(answers);
+    const total = Object.values(preview).reduce((a,b)=>a+b,0) || 1;
+    const parts = Object.keys(preview).map(k=>`${k}:${Math.round(preview[k]/total*100)}%`).join('  ');
+    scoreSummary.textContent = parts;
+    // update radar dataset
+    const vals = ['馬','男孩','狐狸','鼴鼠'].map(k=> Math.round((preview[k]/total)*100));
+    radarChart.data.datasets[0].data = vals;
+    radarChart.update();
+  }
+
+  function computeScoresFromAnswers(ansArr){
+    const tmp = {'馬':0,'男孩':0,'狐狸':0,'鼴鼠':0};
+    ansArr.forEach((choiceIdx,qIdx)=>{
+      if(choiceIdx===null || choiceIdx===undefined) return;
+      const mapping = QUESTIONS[qIdx].choices[choiceIdx].t;
+      // 每題直接 +1 到對應向度（可改為權重）
+      tmp[mapping]++;
+    });
+    return tmp;
+  }
+
+  nextBtn.addEventListener('click', ()=>{
+    // 若未選擇，視為跳過（但可提醒）
+    if(answers[idx]===null){
+      if(!confirm('你尚未選擇，確定要跳過此題？(可稍後返回)')) return;
+    }
+    if(idx < QUESTIONS.length-1){ idx++; renderQuestion(idx); }
+    else { finishTest(); }
+  });
+
+  prevBtn.addEventListener('click', ()=>{ if(idx>0){ idx--; renderQuestion(idx); } });
+
+  restart.addEventListener('click', ()=>{ if(confirm('重新開始測驗？先前答案將被清除。')) location.reload(); });
+
+  exportBtn.addEventListener('click', ()=>{
+    const report = generateReport();
+    const blob = new Blob([report], {type:'text/plain;charset=utf-8'});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'psych-test-result.txt'; a.click();
+    URL.revokeObjectURL(url);
+  });
+
+  function finishTest(){
+    // 隱藏題目區
+    document.getElementById('questionWrap').style.display = 'none';
+    // 計算最終分數
+    const final = computeScoresFromAnswers(answers);
+    const total = Object.values(final).reduce((a,b)=>a+b,0) || 1;
+    const perc = Object.fromEntries(Object.entries(final).map(([k,v])=>[k, Math.round((v/total)*100)]));
+
+    // 更新雷達圖
+    radarChart.data.datasets[0].data = ['馬','男孩','狐狸','鼴鼠'].map(k=>perc[k]);
+    radarChart.update();
+
+    // 判斷主導類型與混合型
+    const sorted = Object.entries(perc).sort((a,b)=>b[1]-a[1]);
+    const top = sorted[0];
+    const second = sorted[1];
+    let title = '';
+    // 若第一與第二接近（例如差距 <=15%），視為並列混合型
+    if(top[1] - second[1] <= 15 && second[1] >= 20){
+      title = `${top[0]} / ${second[0]} — 並列（混合型）`;
+    } else {
+      title = `${top[0]} 型（主導）`;
+    }
+
+    typeTitle.textContent = title;
+    typePerc.textContent = `得分：${Object.entries(perc).map(([k,v])=>`${k} ${v}%`).join(' ｜ ')}`;
+
+    // 完整版解析：主導 + 混合型詳細說明
+    let analysisText = '';
+    analysisText += `你的四大向度（百分比）\n`;
+    Object.entries(perc).forEach(([k,v])=> analysisText += `${k}：${v}%\n`);
+    analysisText += '\n主要解析：\n';
+    analysisText += ANALYSES[top[0]] + '\n\n';
+
+    if(title.includes('並列')){
+      analysisText += '混合型補充解析：\n';
+      analysisText += ANALYSES[second[0]] + '\n\n';
+      // 合成型建議：如何把兩者優勢結合
+      analysisText += `合成建議：\n1) 運用 ${top[0]} 的動力與 ${second[0]} 的平衡，規劃小步驟達成大目標。\n2) 留意兩者可能的衝突：例如衝勁可能壓過需細緻處理的部分，建立檢查清單幫助平衡。\n`;
+    } else {
+      analysisText += '補充：\n';
+      // 顯示其他三種類型的精簡提示
+      const others = Object.keys(ANALYSES).filter(k=>k!==top[0]);
+      others.forEach(o=> analysisText += `- ${o}：${ANALYSES[o].split('\n\n')[0]}\n`);
+      analysisText += '\n建議：\n針對你的主導傾向練習一個互補技巧，例如：若你是馬型，練習每週 1 次的深度傾聽練習。';
+    }
+
+    fullAnalysis.textContent = analysisText;
+    resultPanel.style.display = 'block';
+  }
+
+  function generateReport(){
+    const final = computeScoresFromAnswers(answers);
+    const total = Object.values(final).reduce((a,b)=>a+b,0) || 1;
+    const perc = Object.fromEntries(Object.entries(final).map(([k,v])=>[k, Math.round((v/total)*100)]));
+    let r = `四大人格心理測驗結果\n\n日期：${new Date().toLocaleString()}\n\n`;
+    r += '各向度百分比：\n'; Object.entries(perc).forEach(([k,v])=> r+= `${k}: ${v}%\n`);
+    r += '\n詳解：\n' + fullAnalysis.textContent + '\n\n(題目原始答案)\n';
+    QUESTIONS.forEach((q,i)=>{
+      const a = answers[i];
+      const choiceTxt = (a===null) ? '未作答' : q.choices[a].txt + `（對應：${q.choices[a].t}）`;
+      r += `${i+1}. ${q.text}\n -> ${choiceTxt}\n`;
+    });
+    return r;
+  }
+
+  // 首次呈現
+  renderQuestion(0);
+  updateProgress();
+  </script>
+</body>
+</html>
